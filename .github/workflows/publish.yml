@@ -1,0 +1,59 @@
+name: Publish Caretaker Docker image
+
+env:
+  VERSION: "latest"
+
+on:
+  push:
+    branches:
+      - master
+    paths: 
+      - Dockerfile
+      - .github/workflows/publish.yml
+
+# Jobs should be the same for every workflow in this repository
+# They are configured via ENV variables above and should not be altered in other ways!
+
+jobs:
+  push_github:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+      - name: Build image
+        run: docker pull martinhelmich/typo3:8.7 && \
+          ./docker-copyedit/docker-copyedit.py FROM martinhelmich/typo3:8.7 INTO martinhelmich/typo3-modified:8.7 REMOVE ALL VOLUMES && \
+          docker build . --tag image
+      - name: Push image to GitHub registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}
+          
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          docker tag image $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+  push_dockerhub:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+      - name: Build image
+        run: docker pull martinhelmich/typo3:8.7 && \
+          ./docker-copyedit/docker-copyedit.py FROM martinhelmich/typo3:8.7 INTO martinhelmich/typo3-modified:8.7 REMOVE ALL VOLUMES && \
+          docker build . --tag image
+      - name: Push image to Docker registry
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+          IMAGE_ID=saitho/caretaker-server
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          docker tag image $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION

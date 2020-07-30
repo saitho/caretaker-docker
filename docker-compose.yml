@@ -1,0 +1,20 @@
+version: "3.7"
+services:
+  typo3-web:
+    build:
+      context: .
+    links:
+      - typo3-db:db
+    ports:
+      - 80:80
+    #volumes:
+    #  - type: bind
+    #    source: ./data/LocalConfiguration.php
+    #    target: /var/www/html/typo3conf/LocalConfiguration.php
+  typo3-db:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: typo3
+      MYSQL_PASSWORD: typo3
+      MYSQL_DATABASE: typo3
